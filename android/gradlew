@@ -1,74 +1,53 @@
 #!/bin/sh
 #
-# Gradle start up script for UN*X
-# Official Gradle wrapper script (Gradle 8.4)
+# Gradle start up script for UN*X (Gradle 8.4)
 #
 
-# Attempt to set APP_HOME
-# Resolve links: $0 may be a link
+# Resolve APP_HOME — follow symlinks
 PRG="$0"
-while [ -h "$PRG" ] ; do
+while [ -h "$PRG" ]; do
     ls=$(ls -ld "$PRG")
     link=$(expr "$ls" : '.*-> \(.*\)$')
     if expr "$link" : '/.*' > /dev/null; then
         PRG="$link"
     else
-        PRG=$(dirname "$PRG")"/$link"
+        PRG="$(dirname "$PRG")/$link"
     fi
 done
-SAVED="$(pwd)"
-cd "$(dirname "$PRG")/" > /dev/null
-APP_HOME="$(pwd -P)"
-cd "$SAVED" > /dev/null
+APP_HOME="$(cd "$(dirname "$PRG")" && pwd -P)"
 
-APP_NAME="Gradle"
-APP_BASE_NAME=$(basename "$0")
-
-# Add default JVM options here.
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
-
-# Determine the Java command to use to start the JVM.
-if [ -n "$JAVA_HOME" ] ; then
-    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-        # IBM's JDK on AIX uses strange locations for the executables
-        JAVACMD="$JAVA_HOME/jre/sh/java"
-    else
-        JAVACMD="$JAVA_HOME/bin/java"
-    fi
-    if [ ! -x "$JAVACMD" ] ; then
-        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
-
-Please set the JAVA_HOME variable in your environment to match the
-location of your Java installation."
-    fi
-else
-    JAVACMD="java"
-    which java > /dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-
-Please set the JAVA_HOME variable in your environment to match the
-location of your Java installation."
-fi
-
-die() {
-    echo
-    echo "$*"
-    echo
-    exit 1
-} >&2
-
-# Increase the maximum file descriptors if we can.
-MAX_FD_LIMIT=$(ulimit -H -n 2>/dev/null)
-if [ "$MAX_FD_LIMIT" != "" ] && [ "$MAX_FD_LIMIT" != "unlimited" ]; then
-    ulimit -n "$MAX_FD_LIMIT" 2>/dev/null || true
-fi
-
+APP_BASE_NAME="$(basename "$0")"
 CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
 
-# Execute Gradle
+# Locate java
+if [ -n "$JAVA_HOME" ]; then
+    JAVACMD="$JAVA_HOME/bin/java"
+    if [ ! -x "$JAVACMD" ]; then
+        echo "ERROR: JAVA_HOME is set but $JAVACMD is not executable." >&2
+        exit 1
+    fi
+else
+    JAVACMD="$(command -v java)"
+    if [ -z "$JAVACMD" ]; then
+        echo "ERROR: JAVA_HOME is not set and java is not on PATH." >&2
+        exit 1
+    fi
+fi
+
+# Increase file descriptor limit if possible
+if [ "$(uname)" != "Darwin" ]; then
+    MAX_FD=$(ulimit -H -n 2>/dev/null)
+    case "$MAX_FD" in
+        ''|unlimited|soft) ;;
+        *) ulimit -n "$MAX_FD" 2>/dev/null || true ;;
+    esac
+fi
+
 exec "$JAVACMD" \
-    $DEFAULT_JVM_OPTS \
-    $JAVA_OPTS \
-    $GRADLE_OPTS \
+    -Xmx64m \
+    -Xms64m \
+    ${JAVA_OPTS} \
+    ${GRADLE_OPTS} \
     "-Dorg.gradle.appname=$APP_BASE_NAME" \
     -classpath "$CLASSPATH" \
     org.gradle.wrapper.GradleWrapperMain \
