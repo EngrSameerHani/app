@@ -90,20 +90,25 @@ jobs:
             -O android/gradle/wrapper/gradle-wrapper.jar
           ls -lh android/gradle/wrapper/gradle-wrapper.jar
 
-      # ── 10. Make gradlew executable ───────────────────────────────────────
+      # ── 10. Make gradlew executable (also done again before build as safety) ─
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
       # ── 11. Build debug APK ───────────────────────────────────────────────
       - name: Build debug APK
         run: |
+          # Confirm Java and Android SDK are visible
+          echo "JAVA_HOME=$JAVA_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          java -version
+          # gradlew needs ANDROID_HOME (legacy name) pointing to SDK root
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
           cd android
+          chmod +x gradlew
           ./gradlew assembleDebug \
             --no-daemon \
             --stacktrace \
             -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m"
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
       # ── 12. Verify and rename APK ─────────────────────────────────────────
       - name: Verify and rename APK
