@@ -1,0 +1,6 @@
+{
+  "name": "VelvetLedger - Clothing Retail Credit & Invoicing Suite",
+  "description": "Retail invoicing, digitized customer revolving credit ledger, interest-free installment tracking, 58mm/80mm thermal receipt printing, automated WhatsApp payment reminders, and multi-user role access for clothing stores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

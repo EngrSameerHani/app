@@ -1,0 +1,146 @@
+name: Build Android APK
+
+on:
+  # Run on every push to main/master
+  push:
+    branches: [main, master]
+  # Allow manual trigger from the GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (debug or release)'
+        required: false
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+# Cancel in-progress runs on the same branch to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout ───────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ────────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install JS dependencies ────────────────────────────────────────
+      - name: Install npm dependencies
+        run: npm install --legacy-peer-deps
+
+      # ── 4. Build the Vite web app ─────────────────────────────────────────
+      - name: Build web app (Vite)
+        run: node node_modules/vite/bin/vite.js build
+        env:
+          NODE_ENV: production
+
+      # ── 5. Sync Capacitor web assets into the Android project ─────────────
+      - name: Sync Capacitor assets into Android project
+        run: |
+          # Copy dist/ contents into the Android assets/public folder
+          mkdir -p android/app/src/main/assets/public
+          cp -r dist/. android/app/src/main/assets/public/
+          echo "Web assets synced:"
+          ls -lh android/app/src/main/assets/public/
+
+      # ── 6. Java 17 ────────────────────────────────────────────────────────
+      - name: Set up Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 7. Android SDK ────────────────────────────────────────────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --update
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          echo "Android SDK ready."
+
+      # ── 8. Cache Gradle ───────────────────────────────────────────────────
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-
+
+      # ── 9. Make gradlew executable ────────────────────────────────────────
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      # ── 10. Download Gradle wrapper ───────────────────────────────────────
+      - name: Download Gradle wrapper JAR
+        run: |
+          mkdir -p android/gradle/wrapper
+          curl -fsSL \
+            "https://repo.gradle.org/gradle/libs-releases/org/gradle/gradle-wrapper/8.4/gradle-wrapper-8.4.jar" \
+            -o android/gradle/wrapper/gradle-wrapper.jar
+          echo "Gradle wrapper JAR downloaded."
+
+      # ── 11. Build debug APK ───────────────────────────────────────────────
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            -Pandroid.debug.obsoleteApi=true
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+
+      # ── 12. Rename APK to friendly filename ───────────────────────────────
+      - name: Rename APK
+        run: |
+          mkdir -p release-apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             release-apk/UsmanClothPOS-v2.0.0-debug.apk
+          echo "APK size: $(du -sh release-apk/UsmanClothPOS-v2.0.0-debug.apk)"
+
+      # ── 13. Upload APK as GitHub artifact ─────────────────────────────────
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UsmanClothPOS-APK
+          path: release-apk/UsmanClothPOS-v2.0.0-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      # ── 14. Print download instructions ───────────────────────────────────
+      - name: Print download instructions
+        run: |
+          echo "=================================================="
+          echo "  APK BUILD COMPLETE!"
+          echo "=================================================="
+          echo ""
+          echo "  To download your APK:"
+          echo "  1. Go to: https://github.com/${{ github.repository }}/actions"
+          echo "  2. Click this workflow run"
+          echo "  3. Scroll to 'Artifacts' section"
+          echo "  4. Click 'UsmanClothPOS-APK' to download"
+          echo ""
+          echo "  Install on Android:"
+          echo "  - Enable 'Install from unknown sources' in Settings"
+          echo "  - Transfer APK to phone and tap to install"
+          echo "=================================================="
